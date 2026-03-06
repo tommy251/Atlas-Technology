@@ -78,6 +78,13 @@ export const categories: Category[] = [
     productCount: 112,
     subcategories: ["Hard Drives", "Flash Drives", "Memory Cards", "SSD"],
   },
+  {
+    name: "Power",
+    slug: "power",
+    image: categoryStorage,
+    productCount: 45,
+    subcategories: ["UPS", "Batteries", "Stabilizers", "Inverters"],
+  },
 ];
 
 export const menuCategories = [

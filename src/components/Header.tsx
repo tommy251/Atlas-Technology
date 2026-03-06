@@ -1,8 +1,22 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Search, User, Heart, ShoppingCart, Menu, X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { menuCategories } from "@/data/products";
+import { menuCategories, categories } from "@/data/products";
 import atlantisLogo from "@/assets/atlantis-logo.jpg";
+
+const categorySlugMap: Record<string, string> = {
+  "Phones & Tablets": "phones-tablets",
+  "Computing": "computing",
+  "Imaging & Printing": "imaging-printing",
+  "Networking & Surveillance": "networking-surveillance",
+  "Servers": "servers",
+  "Gaming & Console": "gaming",
+  "Storage": "storage",
+  "Power": "power",
+};
+
+const subToSlug = (sub: string) => sub.toLowerCase().replace(/\s+/g, "-").replace(/&/g, "and");
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -14,10 +28,9 @@ const Header = () => {
     <header className="sticky top-0 z-50 bg-card shadow-nav">
       {/* Main Header */}
       <div className="container mx-auto flex items-center justify-between py-3 px-4 gap-4">
-        {/* Logo */}
-        <a href="/" className="flex-shrink-0">
+        <Link to="/" className="flex-shrink-0">
           <img src={atlantisLogo} alt="Atlantis Technology" className="h-10 md:h-12 w-auto object-contain" />
-        </a>
+        </Link>
 
         {/* Search Bar */}
         <div className="hidden md:flex flex-1 max-w-2xl">
@@ -77,57 +90,68 @@ const Header = () => {
 
             {isCategoryOpen && (
               <div className="absolute top-full left-0 w-64 bg-card shadow-elevated border border-border z-50 animate-fade-in">
-                {menuCategories.map((cat) => (
-                  <div
-                    key={cat.name}
-                    onMouseEnter={() => setActiveCategory(cat.name)}
-                    className="relative"
-                  >
-                    <a
-                      href="#"
-                      className="flex items-center justify-between px-4 py-3 text-sm font-body text-foreground hover:bg-secondary hover:text-accent transition-colors"
+                {menuCategories.map((cat) => {
+                  const slug = categorySlugMap[cat.name] || cat.name.toLowerCase().replace(/\s+/g, "-");
+                  return (
+                    <div
+                      key={cat.name}
+                      onMouseEnter={() => setActiveCategory(cat.name)}
+                      className="relative"
                     >
-                      {cat.name}
-                      <ChevronDown className="h-3 w-3 -rotate-90" />
-                    </a>
+                      <Link
+                        to={`/category/${slug}`}
+                        className="flex items-center justify-between px-4 py-3 text-sm font-body text-foreground hover:bg-secondary hover:text-accent transition-colors"
+                      >
+                        {cat.name}
+                        <ChevronDown className="h-3 w-3 -rotate-90" />
+                      </Link>
 
-                    {activeCategory === cat.name && (
-                      <div className="absolute top-0 left-full w-56 bg-card shadow-elevated border border-border animate-fade-in">
-                        {cat.subcategories.map((sub) => (
-                          <a
-                            key={sub}
-                            href="#"
-                            className="block px-4 py-2.5 text-sm font-body text-foreground hover:bg-secondary hover:text-accent transition-colors"
-                          >
-                            {sub}
-                          </a>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                      {activeCategory === cat.name && (
+                        <div className="absolute top-0 left-full w-56 bg-card shadow-elevated border border-border animate-fade-in">
+                          {cat.subcategories.map((sub) => (
+                            <Link
+                              key={sub}
+                              to={`/category/${slug}/${subToSlug(sub)}`}
+                              className="block px-4 py-2.5 text-sm font-body text-foreground hover:bg-secondary hover:text-accent transition-colors"
+                            >
+                              {sub}
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
 
           {/* Nav Links */}
           <div className="flex items-center">
-            {["Open Box", "Pre-owned", "Support"].map((link) => (
-              <a
-                key={link}
-                href="#"
+            {[
+              { label: "Open Box", to: "/open-box" },
+              { label: "Pre-owned", to: "/pre-owned" },
+              { label: "Support", to: "/support" },
+            ].map((link) => (
+              <Link
+                key={link.label}
+                to={link.to}
                 className="px-6 py-3 text-sm font-body text-foreground hover:text-accent transition-colors relative after:content-[''] after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-0 after:h-0.5 after:bg-accent after:transition-all after:duration-300 hover:after:w-full"
               >
-                {link}
-              </a>
+                {link.label}
+              </Link>
             ))}
           </div>
 
           {/* Popular Searches */}
           <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground font-body">
             <span>Popular:</span>
-            {["Laptops", "iPhone", "Printers"].map((term) => (
-              <a key={term} href="#" className="hover:text-accent transition-colors">{term}</a>
+            {[
+              { label: "Laptops", to: "/category/computing/laptops" },
+              { label: "iPhone", to: "/category/phones-tablets/smartphones" },
+              { label: "Printers", to: "/category/imaging-printing/printers" },
+            ].map((term) => (
+              <Link key={term.label} to={term.to} className="hover:text-accent transition-colors">{term.label}</Link>
             ))}
           </div>
         </div>
@@ -147,15 +171,23 @@ const Header = () => {
                 <Search className="h-4 w-4" />
               </button>
             </div>
-            {menuCategories.map((cat) => (
-              <a key={cat.name} href="#" className="block py-2.5 text-sm font-body text-foreground border-b border-border">
-                {cat.name}
-              </a>
-            ))}
+            {menuCategories.map((cat) => {
+              const slug = categorySlugMap[cat.name] || cat.name.toLowerCase().replace(/\s+/g, "-");
+              return (
+                <Link
+                  key={cat.name}
+                  to={`/category/${slug}`}
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block py-2.5 text-sm font-body text-foreground border-b border-border"
+                >
+                  {cat.name}
+                </Link>
+              );
+            })}
             <div className="flex gap-4 mt-4 pt-4 border-t border-border">
-              <a href="#" className="text-sm font-body text-foreground hover:text-accent">Open Box</a>
-              <a href="#" className="text-sm font-body text-foreground hover:text-accent">Pre-owned</a>
-              <a href="#" className="text-sm font-body text-foreground hover:text-accent">Support</a>
+              <Link to="/open-box" onClick={() => setIsMenuOpen(false)} className="text-sm font-body text-foreground hover:text-accent">Open Box</Link>
+              <Link to="/pre-owned" onClick={() => setIsMenuOpen(false)} className="text-sm font-body text-foreground hover:text-accent">Pre-owned</Link>
+              <Link to="/support" onClick={() => setIsMenuOpen(false)} className="text-sm font-body text-foreground hover:text-accent">Support</Link>
             </div>
           </div>
         </div>

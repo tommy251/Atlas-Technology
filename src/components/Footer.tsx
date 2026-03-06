@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import atlantisLogo from "@/assets/atlantis-logo.jpg";
 
 const footerLinks = {
@@ -9,16 +10,16 @@ const footerLinks = {
     { label: "Returns Policy", href: "#" },
   ],
   "Customer Care": [
-    { label: "Contact Us", href: "#" },
-    { label: "Return a Product", href: "#" },
+    { label: "Contact Us", href: "/support" },
+    { label: "Return a Product", href: "/support" },
     { label: "Distribution", href: "#" },
-    { label: "FAQs", href: "#" },
+    { label: "FAQs", href: "/support" },
   ],
   Extras: [
     { label: "Shop by Brand", href: "#" },
-    { label: "Open Box", href: "#" },
-    { label: "Pre-owned", href: "#" },
-    { label: "Support", href: "#" },
+    { label: "Open Box", href: "/open-box" },
+    { label: "Pre-owned", href: "/pre-owned" },
+    { label: "Support", href: "/support" },
   ],
 };
 
@@ -53,12 +54,21 @@ const Footer = () => {
               <ul className="space-y-2.5">
                 {links.map((link) => (
                   <li key={link.label}>
-                    <a
-                      href={link.href}
-                      className="text-primary-foreground/50 text-sm font-body hover:text-accent transition-colors"
-                    >
-                      {link.label}
-                    </a>
+                    {link.href.startsWith("/") ? (
+                      <Link
+                        to={link.href}
+                        className="text-primary-foreground/50 text-sm font-body hover:text-accent transition-colors"
+                      >
+                        {link.label}
+                      </Link>
+                    ) : (
+                      <a
+                        href={link.href}
+                        className="text-primary-foreground/50 text-sm font-body hover:text-accent transition-colors"
+                      >
+                        {link.label}
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>
