@@ -10,12 +10,17 @@ import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/data/products";
 import { getProductById, allProducts } from "@/data/allProducts";
 import ProductCard from "@/components/ProductCard";
+import { useCart } from "@/context/CartContext";
+import { useWishlist } from "@/context/WishlistContext";
+import { toast } from "sonner";
 
 const ProductDetailPage = () => {
   const { productId } = useParams();
   const product = getProductById(productId || "");
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState("description");
+  const { addToCart } = useCart();
+  const { isInWishlist, toggleWishlist } = useWishlist();
 
   if (!product) {
     return (
@@ -31,6 +36,7 @@ const ProductDetailPage = () => {
     );
   }
 
+  const wishlisted = isInWishlist(product.id);
   const relatedProducts = allProducts
     .filter(p => p.categorySlug === product.categorySlug && p.id !== product.id)
     .slice(0, 4);
@@ -44,7 +50,6 @@ const ProductDetailPage = () => {
       <TopBar />
       <Header />
       <main>
-        {/* Breadcrumb */}
         <div className="bg-secondary/50 border-b border-border">
           <div className="container mx-auto px-4 py-3">
             <nav className="flex items-center gap-2 text-sm font-body text-muted-foreground flex-wrap">
@@ -61,26 +66,19 @@ const ProductDetailPage = () => {
 
         <div className="container mx-auto px-4 py-8 md:py-12">
           <div className="grid md:grid-cols-2 gap-8 md:gap-12">
-            {/* Product Image */}
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="relative">
               {product.badge && (
-                <span className="absolute top-4 left-4 z-10 gradient-brand text-primary-foreground text-xs font-display font-bold px-3 py-1.5">
-                  {product.badge}
-                </span>
+                <span className="absolute top-4 left-4 z-10 gradient-brand text-primary-foreground text-xs font-display font-bold px-3 py-1.5">{product.badge}</span>
               )}
               <div className="aspect-square bg-secondary overflow-hidden">
                 <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
               </div>
             </motion.div>
 
-            {/* Product Info */}
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex flex-col">
               <p className="text-xs font-display text-accent uppercase tracking-[0.2em] mb-2">{product.category}</p>
-              <h1 className="text-xl md:text-2xl lg:text-3xl font-display font-bold text-foreground mb-4 leading-tight">
-                {product.name}
-              </h1>
+              <h1 className="text-xl md:text-2xl lg:text-3xl font-display font-bold text-foreground mb-4 leading-tight">{product.name}</h1>
 
-              {/* Rating */}
               <div className="flex items-center gap-2 mb-4">
                 <div className="flex gap-0.5">
                   {Array.from({ length: 5 }).map((_, i) => (
@@ -90,30 +88,21 @@ const ProductDetailPage = () => {
                 <span className="text-sm text-muted-foreground font-body">({product.rating} rating)</span>
               </div>
 
-              {/* Price */}
               <div className="flex items-center gap-3 mb-6">
-                <span className="text-2xl md:text-3xl font-display font-bold text-foreground">
-                  {formatPrice(product.price)}
-                </span>
+                <span className="text-2xl md:text-3xl font-display font-bold text-foreground">{formatPrice(product.price)}</span>
                 {product.originalPrice && (
                   <>
-                    <span className="text-lg text-muted-foreground line-through font-body">
-                      {formatPrice(product.originalPrice)}
-                    </span>
-                    <span className="gradient-brand text-primary-foreground text-xs font-display font-bold px-2 py-1">
-                      Save {discount}%
-                    </span>
+                    <span className="text-lg text-muted-foreground line-through font-body">{formatPrice(product.originalPrice)}</span>
+                    <span className="gradient-brand text-primary-foreground text-xs font-display font-bold px-2 py-1">Save {discount}%</span>
                   </>
                 )}
               </div>
 
-              {/* Stock */}
               <div className="flex items-center gap-2 mb-6">
                 <Check className="h-4 w-4 text-accent" />
                 <span className="text-sm font-body text-accent">In Stock</span>
               </div>
 
-              {/* Quantity + Add to Cart */}
               <div className="flex items-center gap-4 mb-6">
                 <div className="flex items-center border border-border">
                   <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-3 hover:bg-secondary transition-colors">
@@ -124,16 +113,23 @@ const ProductDetailPage = () => {
                     <Plus className="h-4 w-4" />
                   </button>
                 </div>
-                <Button className="flex-1 gradient-brand text-primary-foreground font-display tracking-wider py-6">
+                <Button
+                  className="flex-1 gradient-brand text-primary-foreground font-display tracking-wider py-6"
+                  onClick={() => { addToCart(product, quantity); toast.success("Added to cart!"); }}
+                >
                   <ShoppingCart className="h-4 w-4 mr-2" />
                   Add to Cart
                 </Button>
-                <Button variant="outline" size="icon" className="h-12 w-12">
-                  <Heart className="h-5 w-5" />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className={`h-12 w-12 ${wishlisted ? "bg-accent text-accent-foreground" : ""}`}
+                  onClick={() => { toggleWishlist(product); toast(wishlisted ? "Removed from wishlist" : "Added to wishlist"); }}
+                >
+                  <Heart className={`h-5 w-5 ${wishlisted ? "fill-current" : ""}`} />
                 </Button>
               </div>
 
-              {/* Trust features */}
               <div className="grid grid-cols-3 gap-3 py-6 border-t border-border">
                 {[
                   { icon: Truck, text: "Free Delivery" },
@@ -147,7 +143,6 @@ const ProductDetailPage = () => {
                 ))}
               </div>
 
-              {/* Meta */}
               <div className="space-y-2 pt-4 border-t border-border text-sm font-body">
                 <p><span className="text-muted-foreground">Brand:</span> <span className="text-foreground font-medium">{product.brand}</span></p>
                 <p><span className="text-muted-foreground">Category:</span> <Link to={`/category/${product.categorySlug}`} className="text-accent hover:underline">{product.category}</Link></p>
@@ -163,11 +158,7 @@ const ProductDetailPage = () => {
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`pb-3 text-sm font-display capitalize transition-colors ${
-                    activeTab === tab
-                      ? "text-foreground border-b-2 border-accent font-medium"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
+                  className={`pb-3 text-sm font-display capitalize transition-colors ${activeTab === tab ? "text-foreground border-b-2 border-accent font-medium" : "text-muted-foreground hover:text-foreground"}`}
                 >
                   {tab}
                 </button>
@@ -179,8 +170,6 @@ const ProductDetailPage = () => {
                   <p className="text-muted-foreground font-body text-sm leading-relaxed">
                     The {product.name} delivers exceptional performance and reliability for professionals and enthusiasts alike.
                     Built with premium materials and cutting-edge technology, this product represents the best in its category.
-                    Whether you're using it for work, entertainment, or creative projects, you'll appreciate the attention to detail
-                    and superior build quality that {product.brand} is known for.
                   </p>
                   <ul className="mt-4 space-y-2 text-sm text-muted-foreground font-body">
                     <li>✓ Premium build quality with durable materials</li>
@@ -192,13 +181,7 @@ const ProductDetailPage = () => {
               )}
               {activeTab === "specifications" && (
                 <div className="space-y-3">
-                  {[
-                    ["Brand", product.brand],
-                    ["Category", product.category],
-                    ["Condition", "Brand New"],
-                    ["Warranty", "Manufacturer Warranty"],
-                    ["SKU", `ATL-${product.id.toUpperCase()}`],
-                  ].map(([label, value]) => (
+                  {[["Brand", product.brand], ["Category", product.category], ["Condition", "Brand New"], ["Warranty", "Manufacturer Warranty"], ["SKU", `ATL-${product.id.toUpperCase()}`]].map(([label, value]) => (
                     <div key={label} className="flex border-b border-border py-2">
                       <span className="w-40 text-sm font-body text-muted-foreground">{label}</span>
                       <span className="text-sm font-body text-foreground">{value}</span>
@@ -215,15 +198,12 @@ const ProductDetailPage = () => {
             </div>
           </div>
 
-          {/* Related Products */}
           {relatedProducts.length > 0 && (
             <section className="mt-12 md:mt-16">
               <h2 className="text-xl md:text-2xl font-display font-bold text-foreground mb-6">Related Products</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                 {relatedProducts.map((p, i) => (
-                  <Link key={p.id} to={`/product/${p.id}`}>
-                    <ProductCard product={p} index={i} />
-                  </Link>
+                  <ProductCard key={p.id} product={p} index={i} />
                 ))}
               </div>
             </section>
