@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
 const PromoSection = () => {
@@ -6,7 +7,6 @@ const PromoSection = () => {
     <section className="py-12 md:py-20">
       <div className="container mx-auto px-4">
         <div className="grid md:grid-cols-2 gap-4 md:gap-6">
-          {/* Promo 1 */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -21,11 +21,12 @@ const PromoSection = () => {
             </h3>
             <p className="text-primary-foreground/60 text-sm font-body mb-6">Get up to 20% discount on selected items</p>
             <div>
-              <Button variant="hero" size="default">Shop Deals</Button>
+              <Button variant="hero" size="default" asChild>
+                <Link to="/shop">Shop Deals</Link>
+              </Button>
             </div>
           </motion.div>
 
-          {/* Promo 2 */}
           <motion.div
             initial={{ opacity: 0, x: 30 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -41,7 +42,9 @@ const PromoSection = () => {
             </h3>
             <p className="text-muted-foreground text-sm font-body mb-6">100% genuine products with warranty</p>
             <div>
-              <Button variant="outline" size="default">Shop Now</Button>
+              <Button variant="outline" size="default" asChild>
+                <Link to="/category/imaging-printing/inks-and-toners">Shop Now</Link>
+              </Button>
             </div>
           </motion.div>
         </div>
