@@ -70,8 +70,11 @@ const CartDrawer = () => {
               <span className="font-display font-bold text-foreground">Subtotal:</span>
               <span className="font-display font-bold text-lg text-foreground">{formatPrice(totalPrice)}</span>
             </div>
-            <Button className="w-full gradient-brand text-primary-foreground font-display tracking-wider py-6">
-              Proceed to Checkout
+            <Button
+              className="w-full gradient-brand text-primary-foreground font-display tracking-wider py-6"
+              asChild
+            >
+              <Link to="/checkout" onClick={() => setIsCartOpen(false)}>Proceed to Checkout</Link>
             </Button>
             <Button variant="outline" className="w-full" onClick={() => setIsCartOpen(false)}>
               Continue Shopping
