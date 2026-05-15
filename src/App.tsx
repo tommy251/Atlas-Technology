@@ -19,6 +19,8 @@ import ProductDetailPage from "./pages/ProductDetailPage";
 import WishlistPage from "./pages/WishlistPage";
 import AllProductsPage from "./pages/AllProductsPage";
 import CheckoutPage from "./pages/CheckoutPage";
+import AdminLogin from "./pages/AdminLogin";
+import AdminDashboard from "./pages/AdminDashboard";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +47,8 @@ const App = () => (
                 <Route path="/wishlist" element={<WishlistPage />} />
                 <Route path="/shop" element={<AllProductsPage />} />
                 <Route path="/checkout" element={<CheckoutPage />} />
+                <Route path="/admin/login" element={<AdminLogin />} />
+                <Route path="/admin/dashboard" element={<AdminDashboard />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
