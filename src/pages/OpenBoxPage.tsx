@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ChevronRight, Package } from "lucide-react";
@@ -7,21 +7,48 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Newsletter from "@/components/Newsletter";
 import ProductCard from "@/components/ProductCard";
-import { openBoxProducts } from "@/data/allProducts";
+import { supabase } from "@/integrations/supabase/client";
+import type { Product } from "@/data/products";
 
 const OpenBoxPage = () => {
   const [sortBy, setSortBy] = useState("default");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const sortedProducts = useMemo(() => {
-    const products = [...openBoxProducts];
-    switch (sortBy) {
-      case "price-asc": products.sort((a, b) => a.price - b.price); break;
-      case "price-desc": products.sort((a, b) => b.price - a.price); break;
-      case "rating": products.sort((a, b) => b.rating - a.rating); break;
-      default: break;
-    }
-    return products;
-  }, [sortBy]);
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await supabase
+        .from("products")
+        .select("*")
+        .eq("is_active", true)
+        .eq("category", "Open Box")
+        .order("created_at", { ascending: false });
+      if (data) {
+        setProducts(data.map((r: any) => ({
+          id: r.id,
+          name: r.name,
+          category: r.category,
+          categorySlug: "open-box",
+          brand: "",
+          price: Number(r.price),
+          originalPrice: r.original_price ? Number(r.original_price) : undefined,
+          image: r.image_url || "/placeholder.svg",
+          badge: r.badge || undefined,
+          rating: 5,
+          inStock: r.stock > 0,
+        })));
+      }
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  const sortedProducts = [...products].sort((a, b) => {
+    if (sortBy === "price-asc") return a.price - b.price;
+    if (sortBy === "price-desc") return b.price - a.price;
+    if (sortBy === "rating") return b.rating - a.rating;
+    return 0;
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -72,13 +99,17 @@ const OpenBoxPage = () => {
             </select>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-            {sortedProducts.map((product, i) => (
-              <Link key={product.id} to={`/product/${product.id}`}>
-                <ProductCard product={product} index={i} />
-              </Link>
-            ))}
-          </div>
+          {loading ? (
+            <p className="text-muted-foreground text-center py-20">Loading...</p>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+              {sortedProducts.map((product, i) => (
+                <Link key={product.id} to={`/product/${product.id}`}>
+                  <ProductCard product={product} index={i} />
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       </main>
       <Newsletter />

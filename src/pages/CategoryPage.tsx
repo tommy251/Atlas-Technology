@@ -1,5 +1,5 @@
 import { useParams, Link } from "react-router-dom";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ChevronRight, SlidersHorizontal, Grid3X3, LayoutList, X } from "lucide-react";
 import TopBar from "@/components/TopBar";
@@ -8,8 +8,9 @@ import Footer from "@/components/Footer";
 import Newsletter from "@/components/Newsletter";
 import ProductCard from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
-import { categories, menuCategories, formatPrice } from "@/data/products";
-import { allProducts, getProductsByCategory } from "@/data/allProducts";
+import { categories, menuCategories } from "@/data/products";
+import { supabase } from "@/integrations/supabase/client";
+import type { Product } from "@/data/products";
 
 const sortOptions = [
   { label: "Default sorting", value: "default" },
@@ -27,6 +28,20 @@ const priceRanges = [
   { label: "Over ₦5,000,000", min: 5000000, max: Infinity },
 ];
 
+const dbRowToProduct = (r: any): Product => ({
+  id: r.id,
+  name: r.name,
+  category: r.subcategory || r.category || "Uncategorized",
+  categorySlug: (r.subcategory || r.category || "uncategorized").toLowerCase().replace(/\s+/g, "-"),
+  brand: "",
+  price: Number(r.price),
+  originalPrice: r.original_price ? Number(r.original_price) : undefined,
+  image: r.image_url || "/placeholder.svg",
+  badge: r.badge || undefined,
+  rating: 5,
+  inStock: r.stock > 0,
+});
+
 const CategoryPage = () => {
   const { categorySlug, subcategorySlug } = useParams();
   const [sortBy, setSortBy] = useState("default");
@@ -34,6 +49,26 @@ const CategoryPage = () => {
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [selectedPriceRange, setSelectedPriceRange] = useState<number | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [dbProducts, setDbProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch products from Supabase
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
+      
+      if (!error && data) {
+        setDbProducts(data.map(dbRowToProduct));
+      }
+      setLoading(false);
+    };
+    load();
+  }, []);
 
   // Find category info
   const categoryInfo = categories.find(c => c.slug === categorySlug);
@@ -52,15 +87,15 @@ const CategoryPage = () => {
       normalize(targetSub).includes(normalize(productCategory));
   };
 
-  // Get products
+  // Get products from DB
   const rawProducts = useMemo(() => {
     if (!categorySlug) return [];
-    let products = allProducts.filter(p => p.categorySlug === categorySlug);
+    let products = dbProducts.filter(p => p.categorySlug === categorySlug);
     if (subcategorySlug && subcategoryName) {
       products = products.filter(p => matchSubcategory(p.category, subcategoryName));
     }
     return products;
-  }, [categorySlug, subcategorySlug, subcategoryName]);
+  }, [categorySlug, subcategorySlug, subcategoryName, dbProducts]);
 
   // Get available brands
   const availableBrands = useMemo(() => {
@@ -328,7 +363,11 @@ const CategoryPage = () => {
               )}
 
               {/* Product Grid */}
-              {filteredProducts.length > 0 ? (
+              {loading ? (
+                <div className="text-center py-20">
+                  <p className="text-muted-foreground font-body">Loading products...</p>
+                </div>
+              ) : filteredProducts.length > 0 ? (
                 <div className={
                   viewMode === "grid"
                     ? "grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6"
