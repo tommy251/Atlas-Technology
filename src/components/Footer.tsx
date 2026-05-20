@@ -88,6 +88,13 @@ const Footer = () => {
             <span>Mastercard</span>
             <span>Bank Transfer</span>
             <span>USSD</span>
+            <Link
+              to="/admin/login"
+              className="text-[10px] text-primary-foreground/20 hover:text-primary-foreground/40 transition-colors ml-1 select-none"
+              title="Admin"
+            >
+              admin
+            </Link>
           </div>
         </div>
       </div>
