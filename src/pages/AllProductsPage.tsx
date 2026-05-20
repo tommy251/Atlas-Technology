@@ -5,14 +5,16 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Newsletter from "@/components/Newsletter";
 import ProductCard from "@/components/ProductCard";
-import { allProducts } from "@/data/allProducts";
+import { useDbProducts } from "@/hooks/useDbProducts";
 import { newArrivals, topSellers } from "@/data/products";
 
 const AllProductsPage = () => {
-  const allProds = [...newArrivals, ...topSellers, ...allProducts];
-  // Deduplicate by id
-  const uniqueProducts = allProds.filter((p, i, arr) => arr.findIndex(x => x.id === p.id) === i);
+  const { products: dbProducts, loading } = useDbProducts();
   const [sortBy, setSortBy] = useState("default");
+
+  // Combine DB products with local newArrivals/topSellers for now
+  const allProds = [...newArrivals, ...topSellers, ...dbProducts];
+  const uniqueProducts = allProds.filter((p, i, arr) => arr.findIndex(x => x.id === p.id) === i);
 
   const sorted = [...uniqueProducts].sort((a, b) => {
     if (sortBy === "price-asc") return a.price - b.price;
@@ -42,13 +44,17 @@ const AllProductsPage = () => {
             <option value="name">Name: A-Z</option>
           </select>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-          {sorted.map((product, i) => (
-            <Link key={product.id} to={`/product/${product.id}`}>
-              <ProductCard product={product} index={i} />
-            </Link>
-          ))}
-        </div>
+        {loading ? (
+          <p className="text-muted-foreground text-center py-20">Loading products...</p>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+            {sorted.map((product, i) => (
+              <Link key={product.id} to={`/product/${product.id}`}>
+                <ProductCard product={product} index={i} />
+              </Link>
+            ))}
+          </div>
+        )}
       </main>
       <Newsletter />
       <Footer />

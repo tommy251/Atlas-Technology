@@ -1,5 +1,5 @@
 import { useParams, Link } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ChevronRight, Star, Heart, ShoppingCart, Truck, Shield, RefreshCw, Minus, Plus, Check } from "lucide-react";
 import TopBar from "@/components/TopBar";
@@ -8,19 +8,91 @@ import Footer from "@/components/Footer";
 import Newsletter from "@/components/Newsletter";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/data/products";
-import { getProductById, allProducts } from "@/data/allProducts";
+import { supabase } from "@/integrations/supabase/client";
 import ProductCard from "@/components/ProductCard";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { toast } from "sonner";
+import type { Product } from "@/data/products";
+
+const dbRowToProduct = (r: any): Product => ({
+  id: r.id,
+  name: r.name,
+  category: r.subcategory || r.category || "Uncategorized",
+  categorySlug: (r.subcategory || r.category || "uncategorized").toLowerCase().replace(/\s+/g, "-"),
+  brand: "",
+  price: Number(r.price),
+  originalPrice: r.original_price ? Number(r.original_price) : undefined,
+  image: r.image_url || "/placeholder.svg",
+  badge: r.badge || undefined,
+  rating: 5,
+  inStock: r.stock > 0,
+});
 
 const ProductDetailPage = () => {
   const { productId } = useParams();
-  const product = getProductById(productId || "");
+  const [product, setProduct] = useState<Product | null>(null);
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState("description");
   const { addToCart } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
+
+  useEffect(() => {
+    const load = async () => {
+      if (!productId) {
+        setLoading(false);
+        return;
+      }
+
+      // Fetch main product
+      const { data: mainData, error: mainError } = await supabase
+        .from("products")
+        .select("*")
+        .eq("id", productId)
+        .eq("is_active", true)
+        .single();
+
+      if (mainError || !mainData) {
+        setLoading(false);
+        return;
+      }
+
+      const p = dbRowToProduct(mainData);
+      setProduct(p);
+
+      // Fetch related products
+      const { data: relatedData } = await supabase
+        .from("products")
+        .select("*")
+        .eq("is_active", true)
+        .eq("category", (mainData as any).category)
+        .neq("id", productId)
+        .limit(4);
+
+      if (relatedData) {
+        setRelatedProducts(relatedData.map(dbRowToProduct));
+      }
+
+      setLoading(false);
+    };
+
+    load();
+  }, [productId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <TopBar />
+        <Header />
+        <div className="container mx-auto px-4 py-20 text-center">
+          <p className="text-muted-foreground font-body">Loading product...</p>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -37,9 +109,6 @@ const ProductDetailPage = () => {
   }
 
   const wishlisted = isInWishlist(product.id);
-  const relatedProducts = allProducts
-    .filter(p => p.categorySlug === product.categorySlug && p.id !== product.id)
-    .slice(0, 4);
 
   const discount = product.originalPrice
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
@@ -175,7 +244,7 @@ const ProductDetailPage = () => {
                     <li>✓ Premium build quality with durable materials</li>
                     <li>✓ Industry-leading performance and reliability</li>
                     <li>✓ Comprehensive manufacturer warranty included</li>
-                    <li>✓ 100% genuine {product.brand} product</li>
+                    <li>✓ 100% genuine product</li>
                   </ul>
                 </div>
               )}
