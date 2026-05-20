@@ -53,4 +53,27 @@ export const useDbProducts = () => {
   }, []);
 
   return { products, loading };
+  
+};
+// Add to useDbProducts.ts
+export const useAllDbProducts = () => {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
+      if (!error && data) {
+        setProducts(data.map(dbRowToProduct));
+      }
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  return { products, loading };
 };
