@@ -3,15 +3,15 @@ import atlantisLogo from "@/assets/atlantis-logo.jpg";
 
 const footerLinks = {
   Information: [
-    { label: "About Us", href: "#" },
-    { label: "Delivery Information", href: "#" },
-    { label: "Privacy Policy", href: "#" },
-    { label: "Terms and Conditions", href: "#" },
-    { label: "Returns Policy", href: "#" },
+    { label: "About Us", href: "/about-us" },
+    { label: "Delivery Information", href: "/delivery-information" },
+    { label: "Privacy Policy", href: "/privacy-policy" },
+    { label: "Terms and Conditions", href: "/terms-and-conditions" },
+    { label: "Returns Policy", href: "/returns-policy" },
   ],
   "Customer Care": [
     { label: "Contact Us", href: "/support" },
-    { label: "Return a Product", href: "/support" },
+    { label: "Return a Product", href: "/returns-policy" },
     { label: "Distribution", href: "#" },
     { label: "FAQs", href: "/support" },
   ],
@@ -83,7 +83,7 @@ const Footer = () => {
           <p className="text-primary-foreground/30 text-xs font-body">
             © 2025 Atlantis Technology. All rights reserved.
           </p>
-          <div className="flex items-center gap-4 text-primary-foreground/30 text-xs font-body">
+          <div className="flex items-center gap-4 text-xs text-primary-foreground/30 font-body">
             <span>Visa</span>
             <span>Mastercard</span>
             <span>Bank Transfer</span>
