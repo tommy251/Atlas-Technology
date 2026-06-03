@@ -21,6 +21,12 @@ import AllProductsPage from "./pages/AllProductsPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
+import AboutUs from "@/pages/AboutUs";
+import DeliveryInformation from "@/pages/DeliveryInformation";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import TermsAndConditions from "@/pages/TermsAndConditions";
+import ReturnsPolicy from "@/pages/ReturnsPolicy";
+
 
 const queryClient = new QueryClient();
 
@@ -37,6 +43,11 @@ const App = () => (
               <AuthModal />
               <WhatsAppButton />
               <Routes>
+                <Route path="/about-us" element={<AboutUs />} />
+                <Route path="/delivery-information" element={<DeliveryInformation />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+                <Route path="/returns-policy" element={<ReturnsPolicy />} />
                 <Route path="/" element={<Index />} />
                 <Route path="/category/:categorySlug" element={<CategoryPage />} />
                 <Route path="/category/:categorySlug/:subcategorySlug" element={<CategoryPage />} />
