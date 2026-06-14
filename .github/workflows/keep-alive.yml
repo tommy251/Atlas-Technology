@@ -10,5 +10,5 @@ jobs:
     steps:
       - name: Ping Supabase
         run: |
-          curl -s "https://pkgwtlmrsvwkbpqxgybd.supabase.co" \
-          -H "apikey: ${{ sb_publishable_db12yAAOeZ88AIDkVwrgCg_7EbGkss- }}"
+          curl -s "https://pkgwtlmrsvwkbpqxgybd.supabase.co/rest/v1/" \
+          -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}"
