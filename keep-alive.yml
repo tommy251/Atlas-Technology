@@ -1,0 +1,14 @@
+name: Keep Supabase Alive
+on:
+  schedule:
+    - cron: '0 0 */3 * *'  # every 3 days
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase
+        run: |
+          curl -s "https://pkgwtlmrsvwkbpqxgybd.supabase.co" \
+          -H "apikey: ${{ sb_publishable_db12yAAOeZ88AIDkVwrgCg_7EbGkss- }}"
