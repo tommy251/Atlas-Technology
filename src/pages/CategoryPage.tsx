@@ -28,11 +28,17 @@ const priceRanges = [
   { label: "Over ₦5,000,000", min: 5000000, max: Infinity },
 ];
 
+// Convert a string to a URL-friendly slug
+const toSlug = (s: string) =>
+  s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+
 const dbRowToProduct = (r: any): Product => ({
   id: r.id,
   name: r.name,
-  category: r.subcategory || r.category || "Uncategorized",
-  categorySlug: (r.subcategory || r.category || "uncategorized").toLowerCase().replace(/\s+/g, "-"),
+  // Use category (e.g. "Laptops") as the display category
+  category: r.category || "Uncategorized",
+  // categorySlug maps to the subcategory slug (e.g. "computing")
+  categorySlug: toSlug(r.subcategory || r.category || "uncategorized"),
   brand: "",
   price: Number(r.price),
   originalPrice: r.original_price ? Number(r.original_price) : undefined,
@@ -40,6 +46,9 @@ const dbRowToProduct = (r: any): Product => ({
   badge: r.badge || undefined,
   rating: 5,
   inStock: r.stock > 0,
+  // Store raw DB fields for filtering
+  _dbCategory: r.category || "",
+  _dbSubcategory: r.subcategory || "",
 });
 
 const CategoryPage = () => {
@@ -52,7 +61,7 @@ const CategoryPage = () => {
   const [dbProducts, setDbProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch products from Supabase
+  // Fetch all active products once
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -61,7 +70,7 @@ const CategoryPage = () => {
         .select("*")
         .eq("is_active", true)
         .order("created_at", { ascending: false });
-      
+
       if (!error && data) {
         setDbProducts(data.map(dbRowToProduct));
       }
@@ -70,40 +79,48 @@ const CategoryPage = () => {
     load();
   }, []);
 
-  // Find category info
+  // Reset filters when route changes
+  useEffect(() => {
+    setSelectedBrands([]);
+    setSelectedPriceRange(null);
+  }, [categorySlug, subcategorySlug]);
+
+  // Find category info from local data
   const categoryInfo = categories.find(c => c.slug === categorySlug);
   const menuCat = menuCategories.find(c => c.name === categoryInfo?.name);
 
-  // Get subcategory name from slug
+  // Derive subcategory display name from slug
   const subcategoryName = subcategorySlug
     ? subcategorySlug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
     : undefined;
 
-  // Match subcategory more flexibly
-  const matchSubcategory = (productCategory: string, targetSub: string): boolean => {
-    const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-    return normalize(productCategory) === normalize(targetSub) ||
-      normalize(productCategory).includes(normalize(targetSub)) ||
-      normalize(targetSub).includes(normalize(productCategory));
-  };
-
-  // Get products from DB
+  // Filter products by matching URL slugs against DB fields
   const rawProducts = useMemo(() => {
     if (!categorySlug) return [];
-    let products = dbProducts.filter(p => p.categorySlug === categorySlug);
-    if (subcategorySlug && subcategoryName) {
-      products = products.filter(p => matchSubcategory(p.category, subcategoryName));
-    }
-    return products;
-  }, [categorySlug, subcategorySlug, subcategoryName, dbProducts]);
 
-  // Get available brands
+    return dbProducts.filter((p: any) => {
+      const dbSubcategorySlug = toSlug(p._dbSubcategory); // e.g. "computing"
+      const dbCategorySlug = toSlug(p._dbCategory);       // e.g. "laptops"
+
+      if (subcategorySlug) {
+        // URL: /category/computing/laptops
+        // Match: subcategory slug = "computing" AND category slug = "laptops"
+        return dbSubcategorySlug === categorySlug && dbCategorySlug === subcategorySlug;
+      } else {
+        // URL: /category/computing
+        // Match: subcategory slug = "computing" (show all products in this parent category)
+        return dbSubcategorySlug === categorySlug;
+      }
+    });
+  }, [categorySlug, subcategorySlug, dbProducts]);
+
+  // Get available brands from filtered products
   const availableBrands = useMemo(() => {
-    const brands = [...new Set(rawProducts.map(p => p.brand))];
+    const brands = [...new Set(rawProducts.map(p => p.brand).filter(Boolean))];
     return brands.sort();
   }, [rawProducts]);
 
-  // Filter and sort
+  // Apply filters and sort
   const filteredProducts = useMemo(() => {
     let products = [...rawProducts];
 
@@ -185,19 +202,19 @@ const CategoryPage = () => {
           <div className="flex gap-8">
             {/* Sidebar Filters - Desktop */}
             <aside className="hidden lg:block w-64 flex-shrink-0">
-              <div className="sticky top-28 space-y-6">
+              <div className="space-y-4 sticky top-24">
                 {/* Subcategories */}
                 {menuCat && !subcategorySlug && (
                   <div className="bg-card p-5 shadow-product">
                     <h3 className="font-display font-semibold text-sm mb-3 text-foreground">Subcategories</h3>
-                    <ul className="space-y-2">
+                    <ul className="space-y-1">
                       {menuCat.subcategories.map(sub => {
-                        const subSlug = sub.toLowerCase().replace(/\s+/g, "-").replace(/&/g, "and");
+                        const subSlug = toSlug(sub);
                         return (
                           <li key={sub}>
                             <Link
                               to={`/category/${categorySlug}/${subSlug}`}
-                              className="text-sm font-body text-muted-foreground hover:text-accent transition-colors"
+                              className="text-sm font-body text-muted-foreground hover:text-accent transition-colors block py-1"
                             >
                               {sub}
                             </Link>
@@ -320,7 +337,7 @@ const CategoryPage = () => {
                       <h4 className="text-xs font-display font-semibold mb-2 text-muted-foreground uppercase tracking-wider">Subcategories</h4>
                       <div className="flex flex-wrap gap-2">
                         {menuCat.subcategories.map(sub => {
-                          const subSlug = sub.toLowerCase().replace(/\s+/g, "-").replace(/&/g, "and");
+                          const subSlug = toSlug(sub);
                           return (
                             <Link
                               key={sub}
