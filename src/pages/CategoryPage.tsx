@@ -32,12 +32,25 @@ const priceRanges = [
 const toSlug = (s: string) =>
   s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
-const dbRowToProduct = (r: any): Product => ({
+// Raw DB row type — separate from Product so we don't modify the Product type
+interface DbRow {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  original_price: number | null;
+  image_url: string | null;
+  category: string | null;
+  subcategory: string | null;
+  stock: number;
+  badge: string | null;
+  is_active: boolean;
+}
+
+const dbRowToProduct = (r: DbRow): Product => ({
   id: r.id,
   name: r.name,
-  // Use category (e.g. "Laptops") as the display category
   category: r.category || "Uncategorized",
-  // categorySlug maps to the subcategory slug (e.g. "computing")
   categorySlug: toSlug(r.subcategory || r.category || "uncategorized"),
   brand: "",
   price: Number(r.price),
@@ -46,9 +59,6 @@ const dbRowToProduct = (r: any): Product => ({
   badge: r.badge || undefined,
   rating: 5,
   inStock: r.stock > 0,
-  // Store raw DB fields for filtering
-  _dbCategory: r.category || "",
-  _dbSubcategory: r.subcategory || "",
 });
 
 const CategoryPage = () => {
@@ -58,7 +68,8 @@ const CategoryPage = () => {
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [selectedPriceRange, setSelectedPriceRange] = useState<number | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  const [dbProducts, setDbProducts] = useState<Product[]>([]);
+  // Store raw DB rows so we can filter on original category/subcategory fields
+  const [rawRows, setRawRows] = useState<DbRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Fetch all active products once
@@ -72,7 +83,7 @@ const CategoryPage = () => {
         .order("created_at", { ascending: false });
 
       if (!error && data) {
-        setDbProducts(data.map(dbRowToProduct));
+        setRawRows(data as DbRow[]);
       }
       setLoading(false);
     };
@@ -94,25 +105,25 @@ const CategoryPage = () => {
     ? subcategorySlug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
     : undefined;
 
-  // Filter products by matching URL slugs against DB fields
-  const rawProducts = useMemo(() => {
+  // Filter raw DB rows by URL slugs, then convert to Product
+  const rawProducts = useMemo((): Product[] => {
     if (!categorySlug) return [];
 
-    return dbProducts.filter((p: any) => {
-      const dbSubcategorySlug = toSlug(p._dbSubcategory); // e.g. "computing"
-      const dbCategorySlug = toSlug(p._dbCategory);       // e.g. "laptops"
+    const filtered = rawRows.filter(r => {
+      // DB: subcategory = "Computing", category = "Laptops"
+      // URL: /category/computing/laptops
+      const dbSubcatSlug = toSlug(r.subcategory || "");  // "computing"
+      const dbCatSlug = toSlug(r.category || "");         // "laptops"
 
       if (subcategorySlug) {
-        // URL: /category/computing/laptops
-        // Match: subcategory slug = "computing" AND category slug = "laptops"
-        return dbSubcategorySlug === categorySlug && dbCategorySlug === subcategorySlug;
+        return dbSubcatSlug === categorySlug && dbCatSlug === subcategorySlug;
       } else {
-        // URL: /category/computing
-        // Match: subcategory slug = "computing" (show all products in this parent category)
-        return dbSubcategorySlug === categorySlug;
+        return dbSubcatSlug === categorySlug;
       }
     });
-  }, [categorySlug, subcategorySlug, dbProducts]);
+
+    return filtered.map(dbRowToProduct);
+  }, [categorySlug, subcategorySlug, rawRows]);
 
   // Get available brands from filtered products
   const availableBrands = useMemo(() => {
