@@ -28,11 +28,16 @@ const priceRanges = [
   { label: "Over ₦5,000,000", min: 5000000, max: Infinity },
 ];
 
-// Convert a string to a URL-friendly slug
+// Convert DB string to URL slug — strips & (not replaces with "and")
+// "Phones & Tablets" → "phones-tablets"
+// "Networking & Surveillance" → "networking-surveillance"
+// "Gaming & Console" → "gaming-console"
 const toSlug = (s: string) =>
-  s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  s.toLowerCase()
+    .replace(/&/g, "")           // remove & entirely
+    .replace(/[^a-z0-9]+/g, "-") // non-alphanumeric → dash
+    .replace(/(^-|-$)/g, "");    // trim leading/trailing dashes
 
-// Raw DB row type — separate from Product so we don't modify the Product type
 interface DbRow {
   id: string;
   name: string;
@@ -68,11 +73,9 @@ const CategoryPage = () => {
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [selectedPriceRange, setSelectedPriceRange] = useState<number | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  // Store raw DB rows so we can filter on original category/subcategory fields
   const [rawRows, setRawRows] = useState<DbRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch all active products once
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -81,39 +84,31 @@ const CategoryPage = () => {
         .select("*")
         .eq("is_active", true)
         .order("created_at", { ascending: false });
-
-      if (!error && data) {
-        setRawRows(data as DbRow[]);
-      }
+      if (!error && data) setRawRows(data as DbRow[]);
       setLoading(false);
     };
     load();
   }, []);
 
-  // Reset filters when route changes
   useEffect(() => {
     setSelectedBrands([]);
     setSelectedPriceRange(null);
   }, [categorySlug, subcategorySlug]);
 
-  // Find category info from local data
   const categoryInfo = categories.find(c => c.slug === categorySlug);
   const menuCat = menuCategories.find(c => c.name === categoryInfo?.name);
 
-  // Derive subcategory display name from slug
   const subcategoryName = subcategorySlug
     ? subcategorySlug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
     : undefined;
 
-  // Filter raw DB rows by URL slugs, then convert to Product
+  // Filter raw DB rows using toSlug on actual DB values
   const rawProducts = useMemo((): Product[] => {
     if (!categorySlug) return [];
 
     const filtered = rawRows.filter(r => {
-      // DB: subcategory = "Computing", category = "Laptops"
-      // URL: /category/computing/laptops
-      const dbSubcatSlug = toSlug(r.subcategory || "");  // "computing"
-      const dbCatSlug = toSlug(r.category || "");         // "laptops"
+      const dbSubcatSlug = toSlug(r.subcategory || ""); // e.g. "phones-tablets"
+      const dbCatSlug = toSlug(r.category || "");        // e.g. "smartphones"
 
       if (subcategorySlug) {
         return dbSubcatSlug === categorySlug && dbCatSlug === subcategorySlug;
@@ -125,20 +120,17 @@ const CategoryPage = () => {
     return filtered.map(dbRowToProduct);
   }, [categorySlug, subcategorySlug, rawRows]);
 
-  // Get available brands from filtered products
   const availableBrands = useMemo(() => {
     const brands = [...new Set(rawProducts.map(p => p.brand).filter(Boolean))];
     return brands.sort();
   }, [rawProducts]);
 
-  // Apply filters and sort
   const filteredProducts = useMemo(() => {
     let products = [...rawProducts];
 
     if (selectedBrands.length > 0) {
       products = products.filter(p => selectedBrands.includes(p.brand));
     }
-
     if (selectedPriceRange !== null) {
       const range = priceRanges[selectedPriceRange];
       products = products.filter(p => p.price >= range.min && p.price < range.max);
@@ -179,7 +171,7 @@ const CategoryPage = () => {
             <nav className="flex items-center gap-2 text-sm font-body text-muted-foreground">
               <Link to="/" className="hover:text-accent transition-colors">Home</Link>
               <ChevronRight className="h-3 w-3" />
-              {categoryInfo && (
+              {categoryInfo ? (
                 <>
                   <Link to={`/category/${categorySlug}`} className="hover:text-accent transition-colors">
                     {categoryInfo.name}
@@ -191,8 +183,7 @@ const CategoryPage = () => {
                     </>
                   )}
                 </>
-              )}
-              {!categoryInfo && (
+              ) : (
                 <span className="text-foreground font-medium">{pageTitle}</span>
               )}
             </nav>
@@ -214,29 +205,24 @@ const CategoryPage = () => {
             {/* Sidebar Filters - Desktop */}
             <aside className="hidden lg:block w-64 flex-shrink-0">
               <div className="space-y-4 sticky top-24">
-                {/* Subcategories */}
                 {menuCat && !subcategorySlug && (
                   <div className="bg-card p-5 shadow-product">
                     <h3 className="font-display font-semibold text-sm mb-3 text-foreground">Subcategories</h3>
                     <ul className="space-y-1">
-                      {menuCat.subcategories.map(sub => {
-                        const subSlug = toSlug(sub);
-                        return (
-                          <li key={sub}>
-                            <Link
-                              to={`/category/${categorySlug}/${subSlug}`}
-                              className="text-sm font-body text-muted-foreground hover:text-accent transition-colors block py-1"
-                            >
-                              {sub}
-                            </Link>
-                          </li>
-                        );
-                      })}
+                      {menuCat.subcategories.map(sub => (
+                        <li key={sub}>
+                          <Link
+                            to={`/category/${categorySlug}/${toSlug(sub)}`}
+                            className="text-sm font-body text-muted-foreground hover:text-accent transition-colors block py-1"
+                          >
+                            {sub}
+                          </Link>
+                        </li>
+                      ))}
                     </ul>
                   </div>
                 )}
 
-                {/* Brand Filter */}
                 {availableBrands.length > 0 && (
                   <div className="bg-card p-5 shadow-product">
                     <h3 className="font-display font-semibold text-sm mb-3 text-foreground">Brand</h3>
@@ -258,7 +244,6 @@ const CategoryPage = () => {
                   </div>
                 )}
 
-                {/* Price Filter */}
                 <div className="bg-card p-5 shadow-product">
                   <h3 className="font-display font-semibold text-sm mb-3 text-foreground">Price Range</h3>
                   <ul className="space-y-2">
@@ -289,15 +274,9 @@ const CategoryPage = () => {
 
             {/* Main Content */}
             <div className="flex-1 min-w-0">
-              {/* Toolbar */}
               <div className="flex items-center justify-between mb-6 gap-4">
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="lg:hidden"
-                    onClick={() => setShowFilters(!showFilters)}
-                  >
+                  <Button variant="outline" size="sm" className="lg:hidden" onClick={() => setShowFilters(!showFilters)}>
                     <SlidersHorizontal className="h-4 w-4 mr-1" />
                     Filters
                   </Button>
@@ -316,7 +295,6 @@ const CategoryPage = () => {
                     </button>
                   </div>
                 </div>
-
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
@@ -338,27 +316,22 @@ const CategoryPage = () => {
                 >
                   <div className="flex items-center justify-between">
                     <h3 className="font-display font-semibold text-sm">Filters</h3>
-                    <button onClick={() => setShowFilters(false)}>
-                      <X className="h-4 w-4" />
-                    </button>
+                    <button onClick={() => setShowFilters(false)}><X className="h-4 w-4" /></button>
                   </div>
 
                   {menuCat && !subcategorySlug && (
                     <div>
                       <h4 className="text-xs font-display font-semibold mb-2 text-muted-foreground uppercase tracking-wider">Subcategories</h4>
                       <div className="flex flex-wrap gap-2">
-                        {menuCat.subcategories.map(sub => {
-                          const subSlug = toSlug(sub);
-                          return (
-                            <Link
-                              key={sub}
-                              to={`/category/${categorySlug}/${subSlug}`}
-                              className="text-xs border border-border px-3 py-1.5 hover:bg-accent hover:text-accent-foreground transition-colors"
-                            >
-                              {sub}
-                            </Link>
-                          );
-                        })}
+                        {menuCat.subcategories.map(sub => (
+                          <Link
+                            key={sub}
+                            to={`/category/${categorySlug}/${toSlug(sub)}`}
+                            className="text-xs border border-border px-3 py-1.5 hover:bg-accent hover:text-accent-foreground transition-colors"
+                          >
+                            {sub}
+                          </Link>
+                        ))}
                       </div>
                     </div>
                   )}
